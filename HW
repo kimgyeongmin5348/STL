@@ -1,0 +1,109 @@
+#include <algorithm>
+#include <array>
+#include <deque>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <list>
+#include <memory>
+#include <numeric>
+#include <print>
+#include <random>
+#include <string>
+#include <vector>
+
+using namespace std;
+
+
+class Player {
+private:
+	string name{};
+	int score{};
+	size_t id{};
+	size_t num{};
+	unique_ptr<char[]> p{};
+
+public:
+	Player() = default;
+
+	Player(const Player& other) : name(other.name), score(other.score), id(other.id), num(other.num), p(new char[num]) {
+		copy(other.p.get(), other.p.get() + num, p.get());
+	}
+
+	/*friend ostream& operator<<(std::ostream& os, const Player& str) {
+		for (int i = {};i < str.name.size();++i)
+			os << str.id <<" / " << str.name;
+		return os;
+	}*/
+
+	Player& operator=(const Player& rhs) {
+		if (this == &rhs)
+			return *this;
+		score = rhs.score;
+	}
+
+	string getName() const {
+		return name;
+	}
+
+	int getScore() const {
+		return score;
+	}
+
+	size_t getId() const {
+		return id;
+	}
+
+	size_t getNum() const {
+		return num;
+	}
+
+	const char* getP() const {
+		return p.get();
+	}
+
+
+	void read(istream& is) {
+		is.read((char*)this, sizeof(Player));
+		p = make_unique<char[]>(num);
+		is.read((char*)p.get(), num);
+	}
+
+	void show() const {
+		cout << "이름 : " << name << ", " << "아이디 : " << id << ", " << "점수 : " << score << ", " << "자원수 : " << num << '\n' << "저장된 글자 : " << p << '\n';
+	}
+
+};
+
+
+int main()
+{
+
+	string inFileName{ "2024 STL 과제 파일" };
+	ifstream in{ inFileName, ios::binary };
+
+	if (not in) {
+		cout << "파일 \"" << inFileName << "\"을 찾을 수 없습니다" << '\n';
+		return 0;
+	}
+	//----------------------------------------------------------------------
+	// [문제 1]
+	//----------------------------------------------------------------------
+
+	vector<Player> players;
+	while (in.peek() != EOF) {
+		Player player;
+		player.read(in);
+		players.emplace_back(move(player));
+	}
+
+	if (!players.empty()) {
+		const Player& lastPlayer = players.back();
+		lastPlayer.show();
+	}
+
+
+
+
+
+}
