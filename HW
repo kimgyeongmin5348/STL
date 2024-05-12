@@ -1,16 +1,12 @@
-#include <algorithm>
-#include <array>
-#include <deque>
-#include <filesystem>
-#include <fstream>
 #include <iostream>
+#include <fstream>
+#include <array>
 #include <list>
-#include <memory>
+#include <algorithm>
+#include <ranges>
+#include <filesystem>
 #include <numeric>
-#include <print>
-#include <random>
-#include <string>
-#include <vector>
+#include <chrono>
 
 using namespace std;
 
@@ -18,28 +14,26 @@ using namespace std;
 class Player {
 private:
 	string name{};
-	int score{};
-	size_t id{};
-	size_t num{};
-	unique_ptr<char[]> p{};
+int score{};
+size_t id{};
+size_t num{};
+char* p{}; // 흠... 원래것으로 일단 못 하겠어서 이렇게 함.
 
 public:
-	Player() = default;
+	Player();
+	~Player();
 
-	Player(const Player& other) : name(other.name), score(other.score), id(other.id), num(other.num), p(new char[num]) {
-		copy(other.p.get(), other.p.get() + num, p.get());
-	}
-
-	/*friend ostream& operator<<(std::ostream& os, const Player& str) {
-		for (int i = {};i < str.name.size();++i)
-			os << str.id <<" / " << str.name;
-		return os;
+	/*Player(const Player& other)
+		: name(other.name), score(other.score), id(other.id), num(other.num) {
+		if (other.p) {
+			p = make_unique<char[]>(other.num);
+			copy(other.p.get(), other.p.get() + other.num, p.get());
+		}
 	}*/
 
-	Player& operator=(const Player& rhs) {
-		if (this == &rhs)
-			return *this;
-		score = rhs.score;
+	bool Player::operator==(const Player& rhs)const
+	{
+	return getScore() == rhs.getScore();
 	}
 
 	string getName() const {
@@ -63,14 +57,23 @@ public:
 	}
 
 
-	void read(istream& is) {
-		is.read((char*)this, sizeof(Player));
-		p = make_unique<char[]>(num);
-		is.read((char*)p.get(), num);
+	bool Player::read(istream& is)
+	{
+		is.read((char*)this, sizeof Player);
+		p = new char[num];
+		is.read((char*)p, num);
+		delete p;
+
+		return bool(is);
 	}
 
-	void show() const {
-		cout << "이름 : " << name << ", " << "아이디 : " << id << ", " << "점수 : " << score << ", " << "자원수 : " << num << '\n' << "저장된 글자 : " << p << '\n';
+	void Player::show() const {
+	cout << "이름: " << name << ", 아이디: " << id << ", 점수: " << score << ", 자원수: " << num << '\n' << "저장된 글자 : " << p << '\n';
+	}
+
+	friend ostream& operator<<(ostream& os, const Player& player) {
+		os << "Player ID : " << player.id << ", Name : " << player.name;
+		return os;
 	}
 
 };
@@ -79,30 +82,215 @@ public:
 int main()
 {
 
-	string inFileName{ "2024 STL 과제 파일" };
-	ifstream in{ inFileName, ios::binary };
+	ifstream in { "2024 STL 과제 파일",ios::binary };
 
 	if (not in) {
-		cout << "파일 \"" << inFileName << "\"을 찾을 수 없습니다" << '\n';
 		return 0;
 	}
-	//----------------------------------------------------------------------
-	// [문제 1]
-	//----------------------------------------------------------------------
+
 
 	vector<Player> players;
 	while (in.peek() != EOF) {
 		Player player;
 		player.read(in);
-		players.emplace_back(move(player));
-	}
-
-	if (!players.empty()) {
-		const Player& lastPlayer = players.back();
-		lastPlayer.show();
+		players.push_back(player);
 	}
 
 
+
+	//----------------------------------------------------------------------
+	// [문제 1]
+	//----------------------------------------------------------------------
+
+	cout << "[문제1] 마지막 Player 정보\n";
+	players.rbegin()->show();
+	cout << "\n";
+	cout << "-----------------------------------------------------------------" << '\n';
+
+	//----------------------------------------------------------------------
+	// [문제 2]
+	//----------------------------------------------------------------------
+
+	auto max_score_player = max_element(players.cbegin(), players.cend(), [](const Player& a, const Player& b) {
+		return a.getScore() < b.getScore();
+		});
+	cout << "[문제2] 가장 점수가 높은 Player 정보\n";
+	max_score_player->show();
+	cout << "\n";
+
+	// Player의 평균 점수 계산
+	long long average_score = accumulate(players.cbegin(), players.cend(), 0.0, [](long long sum, const Player& player) {
+		return sum + player.getScore();
+	});
+	cout << "평균 점수: " << static_cast<long long>(average_score/players.size()) << '\n';
+	cout << "-----------------------------------------------------------------" << '\n';
+
+	//----------------------------------------------------------------------
+	// [문제 3]
+	//----------------------------------------------------------------------
+
+	/*sort(players.begin(), players.end(), [](const Player& a, const Player& b) {
+		return a.getId() < b.getId();
+	});
+	ofstream out{ "같은아이디.txt" };
+	int cnt{ 1 };
+	for (int i = 0; i < players.size(); ++i) {
+		if (players[i].getId() == players[i + 1].getId()) {
+			out << cnt << "  " << players[i] << '\n';
+			++cnt;
+		}
+		else if (players[i].getId() == players[i - 1].getId()) {
+			out << cnt << "  " << players[i] << '\n';
+			++cnt;
+		}
+	}
+
+	cout << "[문제3] id가 같은 객체의 개수 : " << cnt << '\n';
+
+	cout << "-----------------------------------------------------------------" << '\n';*/
+
+	//----------------------------------------------------------------------
+	// [문제 4]
+	//----------------------------------------------------------------------
+	/*int cnt{};
+	for (Player& player : players) {
+		sort(player.getP(), player.getP() + player.getNum());
+
+		bool hasAllChars = true;
+		for (int c = 'a'; c <= 'z'; ++c) {
+			if (!count(player.getP(), player.getP() + player.getNum(), c)) {
+				hasAllChars = false;
+				break;
+			}
+		}
+		if (hasAllChars) {
+			++cnt;
+		}
+
+	}
+	cout << "[문제4] 'a'부터 'z'까지 모든 문자가 메모리에 있는 Player의 개수: " << cnt << "\n";
+	cout << "-----------------------------------------------------------------" << '\n';*/
+
+	//----------------------------------------------------------------------
+	// [문제 5]
+	//----------------------------------------------------------------------
+	cout << "[문제5] id를 입력받아 존재하는 id라면 다음 내용을 한 번에 화면 출력" << '\n';
+	/*static array<Player, 2'000'000>playersId;
+	static array<Player, 2'000'000>playersName;
+	static array<Player, 2'000'000>playersScore;*/
+
+	vector<Player>playersId;
+	vector<Player>playersName;
+	vector<Player>playersScore;
+
+
+	Player player;
+	playersId.push_back(player);
+	playersName.push_back(player);
+	playersScore.push_back(player);
+
+
+
+	copy(players.begin(), players.end(), playersId.begin());
+	copy(players.begin(), players.end(), playersName.begin());
+	copy(players.begin(), players.end(), playersScore.begin());
+
+	sort(playersId.begin(), playersId.end(), [](Player& a, Player& b) {
+		return a.getId() < b.getId();
+	});
+	sort(playersName.begin(), playersName.end(), [](Player& a, Player& b) {
+		return a.getName() < b.getName();
+	});
+	sort(playersScore.begin(), playersScore.end(), [](Player& a, Player& b) {
+		return a.getScore() < b.getScore();
+	});
+
+
+	while (true) {
+		long long ID;
+		cout << "id를 입력해 주세요 : ";
+		cin >> ID;
+		cout << "============================해당 ID 포함 앞과 뒤 Player의 정보=====================================" << '\n';
+		//-------------------------------------- <ID> ------------------------------------------------------
+		auto infor = find_if(playersId.begin(), playersId.end(), [ID](const Player& player) {
+			return player.getId() == ID;
+		});
+
+		if (infor != playersId.end()) {
+			cout << "[ 앞 ]" << '\n';
+			infor->show();
+			if (infor != playersId.begin()) {
+				(infor - 1)->show();
+			}
+			cout << '\n';
+			cout << "[ 해당 ID ]" << '\n';
+			infor->show();
+			cout << '\n';
+			cout << "[ 뒤 ]" << '\n';
+			if (infor != (playersId.end() - 1)) {
+				(infor + 1)->show();
+			}
+			cout << '\n';
+		}
+		else {
+			cout << "해당 id를 가진 Player가 존재하지 않습니다.\n";
+		}
+
+
+		cout << "============================해당 name 포함 앞과 뒤 Player의 정보=====================================" << '\n';
+		//-------------------------------------- <name> ------------------------------------------------------
+		infor = find_if(playersName.begin(), playersName.end(), [ID](const Player a) {
+			return a.getId() == ID;
+		});
+
+		if (infor != playersName.end()) {
+			cout << "[ 앞 ]" << '\n';
+			if (infor != playersName.begin()) {
+			(infor -1)->show();				}
+			cout << '\n';
+			cout << "[ 해당 name ]" << '\n';				
+			infor->show();
+			cout << '\n';
+			cout << "[ 뒤 ]" << '\n';
+			if (infor != playersName.end() - 1) {
+				(infor + 1)->show();
+			}
+			cout << '\n';
+		}
+		else {
+			cout << "해당 id를 가진 Player가 존재하지 않습니다.\n";
+		}
+
+		cout << "============================해당 score 포함 앞과 뒤 Player의 정보=====================================" << '\n';
+		//-------------------------------------- <score> ------------------------------------------------------
+		infor = find_if(playersScore.begin(), playersScore.end(), [ID](const Player a) {
+			return a.getId() == ID;
+		});
+
+		if (infor != playersScore.end()) {
+			cout << "[ 앞 ]" << '\n';
+			if (infor != playersScore.begin()) {
+				(infor - 1)->show();
+			}
+			cout << '\n';
+			cout << "[ 해당 score ]" << '\n';
+			infor->show();
+			cout << '\n';
+			cout << "[ 뒤 ]" << '\n';
+			if (infor != playersScore.end() - 1) {
+				(infor + 1)->show();
+			}
+			cout << '\n';
+		}
+		else {
+			cout << "해당 id를 가진 Player가 존재하지 않습니다.\n";
+		}
+
+
+	}
+
+
+	
 
 
 
