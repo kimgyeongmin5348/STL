@@ -23,13 +23,17 @@ private:
 	int score{};
 	size_t id{};
 	size_t num{};
-	char* p{}; // 흠... 원래것으로 일단 못 하겠어서 이렇게 함.
+	unique_ptr<char[]> p{};
 
 public:
 	Player();
 	~Player();
 
-	bool operator==(const Player& rhs)const;
+	Player(const Player& other);  //복사 생성자
+	Player& operator=(const Player& other); // 복사 대입 연산자.
+	Player(Player&&); // 이동 생성자
+	Player& operator=(Player&&); // 이동 할당 연산자
+
 	string getName() const;
 	int getScore() const;
 	size_t getId() const;
@@ -43,5 +47,7 @@ public:
 		os << "Player ID : " << player.id << ", Name : " << player.name;
 		return os;
 	}
+
+
 
 };
